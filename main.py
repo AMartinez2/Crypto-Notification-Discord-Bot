@@ -37,9 +37,10 @@ import sys
 import os.path
 import json
 from pathlib2 import Path
+import urllib.request
 
 
-API_KEY = open('_API_KEY', 'r').read()
+API_KEY = open('_API_KEY', 'r').read().rstrip()
 CONFIG = json.load(open('.config'))
 LEDGER_INIT_TEMPLATE = {
     "currency": "ETH",
@@ -67,6 +68,12 @@ def initLedger():
     f.close()
 
 
+def normicsApiCall():
+    apiURL = 'https://api.nomics.com/v1/currencies/ticker?key='+API_KEY+'&ids=ETH&interval=1h&convert=USD'
+    data = urllib.request.urlopen(apiURL)
+    return json.load(data)
+
+
 # Takes user input and change settings
 def processInput(command):
     if (command == "waffles"):
@@ -78,30 +85,41 @@ def loadLedger():
     if (not ledgerFileExists()):
         threadedPrint ('Loading ledger FAILED. Initializing new ledger...')
         initLedger()
-    return json.load(open('.config'))
+    return json.load(open('ledger'))
 
 
-def processLedger():
+# Not too worried about efficiency here, as there is a reasonable upper limit
+def processLedger(ledger):
     if (not ledgerFileExists()):
-        threadedPrint ('Processing ledger FAILED. Initializing new ledger...')
+        threadedPrint('Processing ledger FAILED. Initializing new ledger...')
         initLedger()
         return
-    ledger = loadLedger()
+    apiData = normicsApiCall()[0]
+    threadedPrint(apiData['price'])
+    threadedPrint(ledger['record'])
+    if (len(ledger['record']) >= 1440):
+        ledger['record'].pop(0)
+    ledger['record'].append({"price":apiData['price'], "price_timestamp":apiData['price_timestamp']})
+    # TODO::do all the ledger checks here
+    ledgerFile = open('ledger', 'w')
+    ledgerFile.write(json.dumps(ledger))
 
 
 def ledgerThread():
     global STOP_THREADS
     global PREV_TIME
+    # normicsApiCall()
     while True:
         # threadedPrint('thread running')
         if STOP_THREADS:
             break
         # threadedPrint(time.time() - PREV_TIME)
         if (time.time() - PREV_TIME > 5):
+            # normicsApiCall()
             threadedPrint('time')
             PREV_TIME = time.time()
-            loadLedger()
-            processLedger()
+            ledger = loadLedger()
+            processLedger(ledger)
 
 
 def inputThread():
