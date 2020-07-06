@@ -62,12 +62,6 @@ MIN_NOTIF_BUFFER = 0
 MIN_NOTIF_BUFFER_COUNT = 0
 
 
-# Force print for threading
-def threadedPrint(message):
-    print(message)
-    sys.stdout.flush()
-
-
 def ledgerFileExists():
     recentFile = Path('ledger')
     return recentFile.is_file()
@@ -115,13 +109,13 @@ def normicsApiCall():
 # Takes user input and change settings
 def processInput(command):
     if (command == "waffles"):
-        threadedPrint("I like waffles")
+        print("I like waffles")
 
 
 # Call to api and update ledger file
 def loadLedger():
     if (not ledgerFileExists()):
-        threadedPrint ('Loading ledger FAILED. Initializing new ledger...')
+        print('Loading ledger FAILED. Initializing new ledger...')
         initLedger()
     return json.load(open('ledger'))
 
@@ -130,8 +124,9 @@ def loadLedger():
 def processLedger(ledger):
     global MIN_PRICE
     global MAX_PRICE
+    print('start process')
     if (not ledgerFileExists()):
-        threadedPrint('Processing ledger FAILED. Initializing new ledger...')
+        print('Processing ledger FAILED. Initializing new ledger...')
         initLedger()
         return
     apiData = normicsApiCall()[0]
@@ -173,29 +168,8 @@ def ledgerThread():
             processLedger(ledger)
 
 
-def inputThread():
-    global STOP_THREADS
-    while True:
-        q = input()
-        if (q == 'q'):
-            STOP_THREADS = True
-            break
-        processInput(q)
-
-
-if (__name__ == '__main__'):
-    if (not ledgerFileExists()):
-        initLedger()
-    threadedPrint('Verifying ledger...')
-    if (not verifyLedger()):
-        threadedPrint('Ledger verification failed, initializing new ledger...')
-        initLedger()
-    else:
-        threadedPrint('Ledger verification complete.')
-    t1 = threading.Thread(target=ledgerThread)
-    t2 = threading.Thread(target=inputThread)
-    t1.start()
-    t2.start()
-    t1.join()
-    t2.join()
-    threadedPrint('shutting off')
+def ledgerProcess():
+    print('time')
+    PREV_TIME = time.time()
+    ledger = loadLedger()
+    processLedger(ledger)
