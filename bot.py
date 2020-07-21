@@ -15,7 +15,9 @@ async def ledgerLoop():
     await client.wait_until_ready()
     channel = client.get_channel(CONFIG['discordChannelId'])
     while not client.is_closed():
-        ledgerControl.ledgerProcess()
+        processNotifs = ledgerControl.ledgerProcess()
+        for i in processNotifs:
+            await channel.send(i)
         await asyncio.sleep(5)
 
 

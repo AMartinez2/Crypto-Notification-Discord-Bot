@@ -50,9 +50,6 @@ LEDGER_INIT_TEMPLATE = {
     "record": [],
 }
 
-# Thread globals
-STOP_THREADS = False
-PREV_TIME = time.time()
 
 # Ledger processing globals
 MIN_PRICE = sys.float_info.max
@@ -122,14 +119,16 @@ def loadLedger():
 
 
 # Not too worried about efficiency here, as there is a reasonable upper limit
-def processLedger(ledger):
+def interpretLedger(ledger):
     global MIN_PRICE
     global MAX_PRICE
+    notificationList = []
     print('start process')
     if (not ledgerFileExists()):
-        print('Processing ledger FAILED. Initializing new ledger...')
+        print('Processing ledger FAILED: Ledger not found. Initializing new ledger...')
+        notificationList.append('Processing ledger FAILED: Ledger not found. Initializing new ledger...')
         initLedger()
-        return
+        return notificationList
     apiData = normicsApiCall()[0]
     currPrice = float(apiData['price'])
     if (len(ledger['record']) >= 1440):
@@ -148,29 +147,16 @@ def processLedger(ledger):
     ledger['running_average'] = sum(priceList)/len(ledger['record'])
     if (currPrice < MIN_PRICE):
         MIN_PRICE = currPrice
+        notificationList.append('MIN PRICE HIT! ----' + str(currPrice) + ' ---- ' + str(apiData['price_timestamp']))
     if (currPrice > MAX_PRICE):
         MAX_PRICE = currPrice
+        notificationList.append('MAX PRICE HIT! ----' + str(currPrice) + ' ---- ' + str(apiData['price_timestamp']))
     ledgerFile = open('ledger', 'w')
     ledgerFile.write(json.dumps(ledger))
-
-
-def ledgerThread():
-    global STOP_THREADS
-    global PREV_TIME
-    # normicsApiCall()
-    while True:
-        if STOP_THREADS:
-            break
-        if (time.time() - PREV_TIME > 5):
-            # normicsApiCall()
-            threadedPrint('time')
-            PREV_TIME = time.time()
-            ledger = loadLedger()
-            processLedger(ledger)
+    return notificationList
 
 
 def ledgerProcess():
     print('time')
-    PREV_TIME = time.time()
     ledger = loadLedger()
-    processLedger(ledger)
+    return interpretLedger(ledger)
