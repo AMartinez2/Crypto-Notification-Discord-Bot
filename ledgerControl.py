@@ -39,6 +39,7 @@ import json
 from pathlib2 import Path
 import urllib.request
 import datetime
+import dateutil.parser as dateparser
 
 
 API_KEY = open('_API_KEY', 'r').read().rstrip()
@@ -75,7 +76,7 @@ def verifyLedgerRecord(recordList):
             and 'price' in i
             and isinstance(i['price'], float)
             and 'price_timestamp' in i
-            and isinstance(i['price_timestamp'], datetime.datetime)
+            and isinstance(dateparser.parse(i['price_timestamp']), datetime.date)
         )
         if (verified == False): break
     return verified
