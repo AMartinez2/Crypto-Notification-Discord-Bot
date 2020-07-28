@@ -8,22 +8,22 @@ import ledgerControl
 
 CONFIG = json.load(open('.config'))
 
-client  = commands.Bot(command_prefix = '.')
+Client  = commands.Bot(command_prefix = '!')
 
 
 async def ledgerLoop():
-    await client.wait_until_ready()
-    channel = client.get_channel(CONFIG['discordChannelId'])
-    while not client.is_closed():
+    await Client.wait_until_ready()
+    channel = Client.get_channel(CONFIG['discordChannelId'])
+    while not Client.is_closed():
         processNotifs = ledgerControl.ledgerProcess()
         for i in processNotifs:
             await channel.send(i)
         await asyncio.sleep(5)
 
 
-@client.event
+@Client.event
 async def on_ready():
-    channel = client.get_channel(CONFIG['discordChannelId'])
+    channel = Client.get_channel(CONFIG['discordChannelId'])
     await channel.send('bot startup')
     if (not ledgerControl.ledgerFileExists()):
         ledgerControl.initLedger()
@@ -35,10 +35,14 @@ async def on_ready():
         await channel.send('Ledger verification complete.')
 
 
-async def on_message():
-    channel = client.get_channel(CONFIG['discordChannelId'])
-    await channel.send('@everyone hello')
+@Client.event
+async def on_message(message):
+    channel = Client.get_channel(CONFIG['discordChannelId'])
+    if (message.content[0] == '!'):
+        await message.channel.send('accepting commands')
+    if (message.content.startswith('!waffles')):
+        await message.channel.send('waffles you bitch')
 
 
-client.loop.create_task(ledgerLoop())
-client.run(CONFIG['discordToken'])
+Client.loop.create_task(ledgerLoop())
+Client.run(CONFIG['discordToken'])

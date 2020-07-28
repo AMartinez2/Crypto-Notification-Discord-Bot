@@ -58,6 +58,8 @@ MAX_NOTIF_BUFFER = 0
 MAX_NOTIF_BUFFER_COUNT = 0
 MIN_NOTIF_BUFFER = 0
 MIN_NOTIF_BUFFER_COUNT = 0
+MIN_NOTIF_LIMITER_COUNT = CONFIG['notificationLimiter']
+MAX_NOTIF_LIMITER_COUNT = CONFIG['notificationLimiter']
 
 
 def ledgerFileExists():
@@ -118,10 +120,23 @@ def loadLedger():
     return json.load(open('ledger'))
 
 
+# Increment notification rate limiters
+def limiterStep():
+    global MIN_NOTIF_LIMITER_COUNT
+    global MAX_NOTIF_LIMITER_COUNT
+    if (MIN_NOTIF_LIMITER_COUNT < CONFIG['notificationLimiter']):
+        MIN_NOTIF_LIMITER_COUNT += 1
+    if (MAX_NOTIF_LIMITER_COUNT < CONFIG['notificationLimiter']):
+        MAX_NOTIF_LIMITER_COUNT += 1
+
+
+# TODO::This function is getting too long. Refractor
 # Not too worried about efficiency here, as there is a reasonable upper limit
 def interpretLedger(ledger):
     global MIN_PRICE
     global MAX_PRICE
+    global MIN_NOTIF_LIMITER_COUNT
+    global MAX_NOTIF_LIMITER_COUNT
     notificationList = []
     print('start process')
     if (not ledgerFileExists()):
@@ -147,12 +162,21 @@ def interpretLedger(ledger):
     ledger['running_average'] = sum(priceList)/len(ledger['record'])
     if (currPrice < MIN_PRICE):
         MIN_PRICE = currPrice
-        notificationList.append('MIN PRICE HIT! ----' + str(currPrice) + ' ---- ' + str(apiData['price_timestamp']))
+        if (MIN_NOTIF_LIMITER_COUNT == CONFIG['notificationLimiter']):
+            MIN_NOTIF_LIMITER_COUNT = 0
+            notificationList.append(
+                'MIN PRICE HIT! ----' + str(currPrice) + ' ---- ' + str(apiData['price_timestamp'])
+            )
     if (currPrice > MAX_PRICE):
         MAX_PRICE = currPrice
-        notificationList.append('MAX PRICE HIT! ----' + str(currPrice) + ' ---- ' + str(apiData['price_timestamp']))
+        if (MAX_NOTIF_LIMITER_COUNT == CONFIG['notificationLimiter']):
+            MAX_NOTIF_LIMITER_COUNT = 0
+            notificationList.append(
+                'MAX PRICE HIT! ----' + str(currPrice) + ' ---- ' + str(apiData['price_timestamp'])
+            )
     ledgerFile = open('ledger', 'w')
     ledgerFile.write(json.dumps(ledger))
+    limiterStep()
     return notificationList
 
 
